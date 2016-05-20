@@ -16,41 +16,139 @@ function check_thrive_leads_plugin_is_active() {
 	if(function_exists('tve_leads_init')) {
 
 		/**
-		 * Hooks into a ThriveLeads action hook right before data is sent to Active Campaign API
+		 * Hooks into a ThriveLeads action right before data is sent to Active Campaign API
 		 * and adds Google UTM parameters as tags to new subscriber
 		 *
-		 * @param  array $data ThriveLeads form submit data
+		 * @param  array $data ThriveLeads form submit data that contains the UTM parameters
 		 * @return array $data 
 		*/
 		function tve_leads_utm_api_form_submit_filter($data) {
 			
-			// Create an array of keys so that only UTM $_GET parameters are added as tags if there are others set
-			$utmArray = array('utm_campaign', 'utm_source', 'utm_content', 'utm_medium', 'utm_term');
+			// Check if the Active Camapign tags key exists and that $_GET parameters exist before we do anything
+			if(array_key_exists('activecampaign_tags', $data) && array_key_exists('get_data', $data['thrive_leads'])) {
 
-			foreach($utmArray as $key) {
-				if(array_key_exists($key, $data['thrive_leads']['get_data'])) {
-					$tags .= ", " . $data['thrive_leads']['get_data'][$key];
-				}
-			}
+				// Check that any set $_GET params are actually UTM params 
+				if(count(preg_grep('/^utm[\_]/', array_keys($data['thrive_leads']['get_data']))) > 0) {
 
-			// Check if any UTM parameters have been set. If they have not the $tags string will be empty
-			if(!empty($tags)) {
-				// Check if there are tags already set from the ThriveLeads plugin API connection
-				if(strlen($data['activecampaign_tags']) > 0) {
-					// concat strings with comma
-					$data['activecampaign_tags'] .= $tags;
-				} else {
-					// Remove comma from beginning of string and add new tags string to array
-					$tags = substr($tags, 1);
-					$data['activecampaign_tags'] = $tags;
-				}
-			}
+					// Create an array of keys so that only UTM $_GET parameters are added as tags if there are others set
+					$utmArray = get_option('tvac_utm_setting');
+
+					foreach($utmArray as $key => $val) {
+						if(array_key_exists($key, $data['thrive_leads']['get_data'])) {
+							$tags .= ", " . $data['thrive_leads']['get_data'][$key];
+						}
+					}
+					
+					// Check if there are tags already set from the ThriveLeads plugin API connection
+					if(strlen($data['activecampaign_tags']) > 0) {
+						// concat strings with commas
+						$data['activecampaign_tags'] .= $tags;
+					} else {
+						// Remove comma from beginning of string and add new tags string to array
+						$tags = substr($tags, 1);
+						$data['activecampaign_tags'] = $tags;
+					}
+
+				}	
+
+			}	
 
 			return $data;
+			die();
 
 		}
 
-		add_action('tcb_api_subscribe_data', 'tve_leads_utm_api_form_submit_filter');
+		add_filter('tcb_api_subscribe_data', 'tve_leads_utm_api_form_submit_filter');
+
+		/**
+		 * Add options page to Settings menu in admin
+		*/
+		function thrive_active_campaign_utm_admin_menu() {
+			add_options_page('Thrive Active Campaign UTM Settings', 'Thrive UTM', 'manage_options', 'thrive-active-campaign-utm', 'thrv_active_campaign_utm_admin_page');
+		}
+
+		add_action('admin_menu', 'thrive_active_campaign_utm_admin_menu');
+
+		/**
+		 * Callback function for admin options page HTML output
+		*/
+		function thrv_active_campaign_utm_admin_page() {
+			if ( !current_user_can( 'manage_options' ) )  {
+				wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+			}
+			
+			include plugin_dir_path( __FILE__ ) . "/admin/utm_thrive_to_active_campaign.php";
+			die();
+		}
+		
+		/**
+		 * Register options page settings to use Settings API
+		*/
+		function my_admin_init() {
+		    register_setting( 'tvac_utm_settings_group', 'tvac_utm_setting' );
+		    add_settings_section( 'section-one', 'Google UTM Parameters', 'section_one_callback', 'thrive-active-campaign-utm' );
+		    add_settings_field( 'field-two', 'utm_source', 'field_source_callback', 'thrive-active-campaign-utm', 'section-one' );
+		    add_settings_field( 'field-five', 'utm_medium', 'field_medium_callback', 'thrive-active-campaign-utm', 'section-one' );
+		    add_settings_field( 'field-three', 'utm_term', 'field_term_callback', 'thrive-active-campaign-utm', 'section-one' );
+		    add_settings_field( 'field-four', 'utm_content', 'field_content_callback', 'thrive-active-campaign-utm', 'section-one' );
+		    add_settings_field( 'field-one', 'utm_campaign', 'field_campaign_callback', 'thrive-active-campaign-utm', 'section-one' );
+		}
+
+		add_action( 'admin_init', 'my_admin_init' );
+
+		/**
+		 * Callback function for admin screeen section
+		*/
+		function section_one_callback() {
+		    echo 'Check which UTM parameters you would like saved as tags if they are present in the URL.';
+		}
+
+		/**
+		 * Callback function for utm_campaign checkbox field 
+		*/
+		function field_campaign_callback() {
+		   tvac_checkbox('utm_campaign');
+		}
+
+		/**
+		 * Callback function for utm_source checkbox field
+		*/
+		function field_source_callback() {
+		    tvac_checkbox('utm_source');
+		}
+
+		/**
+		 * Callback function for utm_term checkbox field
+		*/
+		function field_term_callback() {
+		    tvac_checkbox('utm_term');
+		}
+
+		/**
+		 * Callback function for utm_content checkbox field
+		*/
+		function field_content_callback() {
+		    tvac_checkbox('utm_content');
+		}
+
+		/**
+		 * Callback function for utm_medium checkbox field
+		*/
+		function field_medium_callback() {
+		    tvac_checkbox('utm_medium');
+		}
+
+		/**
+		 * Hooks into a ThriveLeads action right before data is sent to Active Campaign API
+		 * and adds Google UTM parameters as tags to new subscriber
+		 *
+		 * @param  string $utm The name of the utm paremeter  
+		*/
+		function tvac_checkbox($utm) {
+			$setting = (array) get_option('tvac_utm_setting');
+			echo "<input type='checkbox' name='tvac_utm_setting[$utm]' value='1'" . checked( 1, $setting[$utm], false) . " />";
+		}
+
 	}	
 
 }
