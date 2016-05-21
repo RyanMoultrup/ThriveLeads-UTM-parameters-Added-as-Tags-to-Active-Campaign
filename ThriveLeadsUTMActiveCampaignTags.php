@@ -1,6 +1,6 @@
 <?php
 /*
-Plugin Name: ThriveLeads UTM parameters Added as Tags to Active Campaign
+Plugin Name: ThriveLeads: UTM parameters Added as Tags to Active Campaign
 Plugin URI: http://spectrumwebsolution.com
 Description:Adds Google UTM parameters as tags to Active Campaign API calls from ThriveLeads plugin forms when submitted
 Author: Ryan Moultrup
