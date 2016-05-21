@@ -4,7 +4,7 @@ Plugin Name: ThriveLeads UTM parameters Added as Tags to Active Campaign
 Plugin URI: http://spectrumwebsolution.com
 Description:Adds Google UTM parameters as tags to Active Campaign API calls from ThriveLeads plugin forms when submitted
 Author: Ryan Moultrup
-Version: 0.1.0
+Version: 1.0.0
 Author URI: http://spectrumwebsolution.com
 */
 
@@ -27,10 +27,10 @@ function check_thrive_leads_plugin_is_active() {
 			// Check if the Active Camapign tags key exists and that $_GET parameter(s) exist before we do anything
 			if(array_key_exists('activecampaign_tags', $data) && array_key_exists('get_data', $data['thrive_leads'])) {
 
-				// Check that any set $_GET params are actually UTM params 
+				// Check that any $_GET params are actually UTM params 
 				if(count(preg_grep('/^utm[\_]/', array_keys($data['thrive_leads']['get_data']))) > 0) {
 
-					// Get user options to create an array of keys so that only set UTM $_GET parameters are added as tags if there are others
+					// Get user options to create an array of keys so that only set UTM parameters are added as tags if there are others
 					$utmArray = get_option('tvac_utm_setting');
 
 					foreach($utmArray as $key => $val) {
